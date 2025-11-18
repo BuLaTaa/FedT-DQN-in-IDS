@@ -1,4 +1,4 @@
-# fed_algorithm.py (修复版 - 包含AUC指标)
+# fed_algorithm.py 
 import logging
 import numpy as np
 import torch
@@ -15,16 +15,16 @@ class FedAlgorithm:
         self.patience = patience
         self.logger = Logger()
         
-        # ========== 更新：增强的指标跟踪 - 包含AUC指标 ==========
+        # ========== 更新：增强的指标跟踪  ==========
         self.metrics = {
             'global': {
                 'accuracy': [], 'q1_loss': [], 'q2_loss': [], 'policy_loss': [],
-                'precision': [], 'recall': [], 'f1': [], 'auc': []  # 新增AUC
+                'precision': [], 'recall': [], 'f1': [], 'auc': [] 
             },
             'clients': {
                 i: {
                     'accuracy': [], 'q1_loss': [], 'q2_loss': [], 'policy_loss': [],
-                    'precision': [], 'recall': [], 'f1': [], 'auc': []  # 新增AUC
+                    'precision': [], 'recall': [], 'f1': [], 'auc': [] 
                 } 
                 for i in range(len(algorithms))
             }
@@ -71,8 +71,7 @@ class FedAlgorithm:
                     precision = stats.get('precision', 0.0)
                     recall = stats.get('recall', 0.0)
                     f1 = stats.get('f1', 0.0)
-                    auc = stats.get('auc', 0.0)  # 新增AUC获取
-                    
+                    auc = stats.get('auc', 0.0)  
                     # 记录客户端指标（包含AUC）
                     self.metrics['clients'][client_id]['accuracy'].append(accuracy)
                     self.metrics['clients'][client_id]['q1_loss'].append(q1_loss)
@@ -81,7 +80,7 @@ class FedAlgorithm:
                     self.metrics['clients'][client_id]['precision'].append(precision)
                     self.metrics['clients'][client_id]['recall'].append(recall)
                     self.metrics['clients'][client_id]['f1'].append(f1)
-                    self.metrics['clients'][client_id]['auc'].append(auc)  # 新增AUC记录
+                    self.metrics['clients'][client_id]['auc'].append(auc) 
                     
                     # ===== 修复：传递完整指标给全局计算（包含AUC）=====
                     client_metrics.append({
