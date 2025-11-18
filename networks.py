@@ -3,7 +3,6 @@ import torch
 import torch.nn as nn
 
 class ConcatMlp(nn.Module):
-    """连接输入特征和动作的多层感知机"""
     
     def __init__(self, input_dim, output_dim, hidden_sizes):
         super().__init__()
