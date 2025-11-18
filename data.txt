@@ -1,0 +1,5 @@
+The datasets used in this study are available from the following open-source repositories:
+
+UNSW-MG24: https://ieee-dataport.org/documents/unsw-mg24
+CIC IIoT 2025: https://www.unb.ca/cic/datasets/iiot-dataset-2025.html
+NIDS Datasets: https://staff.itee.uq.edu.au/marius/NIDS_datasets/
