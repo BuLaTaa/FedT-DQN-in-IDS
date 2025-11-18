@@ -1,4 +1,4 @@
-# policy.py (修复策略接口兼容性)
+
 import torch
 import torch.nn as nn
 from torch.distributions import Categorical
@@ -8,15 +8,11 @@ from rlkit.torch.sac.policies.base import TorchStochasticPolicy
 import rlkit.torch.pytorch_util as ptu
 import logging
 
-# 设置日志级别
+
 logging.basicConfig(level=logging.ERROR, format='%(asctime)s [%(levelname)s] %(message)s')
 
 class ClassificationPolicy(Mlp, TorchStochasticPolicy):
-    """
-    入侵检测专用策略网络
-    输入：观测特征（网络流量特征）
-    输出：离散动作概率分布（0: 正常，1: 异常）
-    """
+
 
     def __init__(self, hidden_sizes, obs_dim, action_dim=2, init_w=1e-3, hidden_activation=nn.ReLU, output_activation=None, temperature=1.0, layer_normalization=False, **kwargs):
         assert action_dim == 2, "入侵检测应为二元分类"
@@ -25,14 +21,14 @@ class ClassificationPolicy(Mlp, TorchStochasticPolicy):
         self.device = ptu.device
         self.to(self.device)
         
-        # 添加层标准化（可选）
+  
         self.layer_norm = nn.LayerNorm(hidden_sizes[-1]) if layer_normalization else None
         
-        # 初始化分类参数
+
         self.temperature = temperature
         self._init_fc_layers()
         
-        # 添加初始化验证
+  
         try:
             self._validate_initialization()
         except RuntimeError as e:
@@ -40,7 +36,7 @@ class ClassificationPolicy(Mlp, TorchStochasticPolicy):
             raise
     
     def _validate_initialization(self):
-        """验证网络是否合理初始化"""
+    
         self.to(self.device)
         test_input = torch.randn(1, self.input_size).to(self.device)
         with torch.no_grad():
@@ -53,7 +49,7 @@ class ClassificationPolicy(Mlp, TorchStochasticPolicy):
                 raise RuntimeError("策略网络输出包含NaN/Inf")
     
     def _init_fc_layers(self):
-        """分类专用层初始化"""
+     
         for layer in self.fcs:
             if isinstance(layer, nn.Linear):
                 nn.init.kaiming_normal_(layer.weight, mode='fan_out', nonlinearity='relu')
@@ -61,10 +57,7 @@ class ClassificationPolicy(Mlp, TorchStochasticPolicy):
         nn.init.normal_(self.last_fc.weight, mean=0, std=1e-2)
 
     def forward(self, obs):
-        """
-        输入：obs - 观测特征 (batch_size, obs_dim)
-        输出：分类分布 (batch_size, action_dim)
-        """
+      
         if obs.dim() == 1:
             obs = obs.unsqueeze(0)
         elif obs.dim() != 2:
@@ -85,17 +78,17 @@ class ClassificationPolicy(Mlp, TorchStochasticPolicy):
         return dist
 
     def logprob(self, actions, dist):
-        """计算动作的日志概率"""
+
         return dist.log_prob(actions.squeeze(-1)).unsqueeze(-1)
 
     def _preprocess_observation(self, obs):
-        """预处理观测值，确保格式正确"""
+
         expected_dim = self.input_size
         
-        # 精简日志信息
+  
         logging.debug(f"预处理输入: 类型={type(obs)}, 维度={getattr(obs, 'ndim', 'N/A')}, 形状={getattr(obs, 'shape', 'N/A')}")
         
-        # ============= 关键修复：优先处理张量类型 =============
+   
         if isinstance(obs, torch.Tensor):
             obs = obs.detach().cpu().numpy().astype(np.float32)
         
@@ -105,7 +98,7 @@ class ClassificationPolicy(Mlp, TorchStochasticPolicy):
             obs = np.full(expected_dim, obs, dtype=np.float32)
         
         if isinstance(obs, tuple):
-            obs = obs[0]  # 只保留第一个元素
+            obs = obs[0]  
         
         if not isinstance(obs, (np.ndarray, torch.Tensor)):
             if hasattr(obs, '__array__') or hasattr(obs, '__iter__'):
@@ -117,7 +110,7 @@ class ClassificationPolicy(Mlp, TorchStochasticPolicy):
             else:
                 raise TypeError(f"不支持的观测数据类型: {type(obs)}")
         
-        # 确保是NumPy数组
+
         if isinstance(obs, torch.Tensor):
             obs = obs.detach().cpu().numpy()
         
@@ -139,7 +132,7 @@ class ClassificationPolicy(Mlp, TorchStochasticPolicy):
             if obs.dtype != np.float32:
                 obs = obs.astype(np.float32)
             
-            # ============= 关键修复：确保转换为张量时在正确设备上 =============
+       
             obs = torch.from_numpy(obs).float().to(self.device)
         
         if obs.dim() == 1 and obs.shape[0] == expected_dim:
@@ -153,10 +146,7 @@ class ClassificationPolicy(Mlp, TorchStochasticPolicy):
         return obs
 
     def get_action(self, obs, deterministic=False):
-        """
-        获取分类动作 - 修复返回格式兼容性
-        
-        返回格式：
+      
         - action: int 或 numpy array
         - info: dict (包含 log_prob)
         """
@@ -174,8 +164,7 @@ class ClassificationPolicy(Mlp, TorchStochasticPolicy):
                 
                 logging.debug(f"策略网络输出: 动作={action_value}, 日志概率={log_prob_value}")
             
-            # ============= 修复：返回兼容格式 =============
-            # 返回 (action, agent_info) 格式，兼容标准rlkit接口
+       
             agent_info = {
                 'log_prob': log_prob_value,
                 'mean': dist.probs.cpu().numpy() if dist.probs.dim() > 0 else float(dist.probs),
@@ -188,9 +177,9 @@ class ClassificationPolicy(Mlp, TorchStochasticPolicy):
             logging.error(f"策略网络get_action失败: {str(e)}")
             raise
 
-    # ============= 新增：添加标准rlkit策略接口方法 =============
+
     def get_actions(self, obs, deterministic=False):
-        """批量获取动作 - 标准rlkit接口"""
+  
         if obs.dim() == 1:
             obs = obs.unsqueeze(0)
         
@@ -206,20 +195,20 @@ class ClassificationPolicy(Mlp, TorchStochasticPolicy):
         return np.array(actions), agent_infos
 
     def reset(self):
-        """重置策略状态 - 标准rlkit接口"""
+  
         pass
 
     def train(self, mode=True):
-        """设置训练模式"""
+     
         super().train(mode)
         return self
 
     def eval(self):
-        """设置评估模式"""
+   
         return self.train(False)
 
 class MultiHeadClassificationPolicy(ClassificationPolicy):
-    """联邦Former适配版：支持Transformer特征融合"""
+
     def __init__(self, transformer_layers=2, **kwargs):
         super().__init__(**kwargs)
         encoder_layer = nn.TransformerEncoderLayer(d_model=self.hidden_sizes[-1], nhead=4, dim_feedforward=2048)
