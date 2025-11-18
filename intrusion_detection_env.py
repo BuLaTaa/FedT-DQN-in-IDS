@@ -1,19 +1,16 @@
-# intrusion_detection_env.py (修复动作类型处理)
+# intrusion_detection_env.py 
 import numpy as np
 import gym
 from gym import spaces
 import logging
 import torch 
 
-# 设置日志级别
+
 logging.basicConfig(level=logging.ERROR, format='%(asctime)s [%(levelname)s] %(message)s')
 
 class IntrusionDetectionEnv(gym.Env):
     """
-    强化学习环境：入侵检测
-    - 状态：网络流量特征
-    - 动作：0（正常）或 1（异常）
-    - 奖励：基于检测准确性
+    
     """
     
     def __init__(self, data_loader, max_steps=1000):
@@ -21,10 +18,10 @@ class IntrusionDetectionEnv(gym.Env):
         self.data_loader = data_loader
         self.max_steps = max_steps
         
-        # 动作空间：离散，0或1
+
         self.action_space = spaces.Discrete(2)
         
-        # 观察空间：连续特征向量
+
         feature_dim_val = int(self.data_loader.feature_dim)
         if feature_dim_val <= 0:
             raise ValueError(f"Feature dimension must be positive, got {feature_dim_val}")
@@ -36,22 +33,21 @@ class IntrusionDetectionEnv(gym.Env):
             dtype=np.float32
         )
         
-        # 环境状态
+
         self.current_step = 0
         self.current_batch = None
         self.current_labels = None
         self.current_idx = 0
         
-        #logging.info("环境初始化完成")
+   
 
     def _get_observation(self, idx):
-        """确保返回正确维度的观测值"""
+  
         if self.current_batch is None:
             logging.error("当前批次数据为空，请先调用reset()")
             raise RuntimeError("当前批次数据为空，请先调用reset()")
 
-        # 获取当前批次的特征（假设为二维数组，行为样本，列为特征）
-        # 注意：我们假设current_batch是二维的，形状为 (num_samples, feature_dim)
+    
         if self.current_batch.ndim != 2:
             raise ValueError(f"current_batch 必须是二维数组，实际维度: {self.current_batch.ndim}")
         
@@ -59,10 +55,10 @@ class IntrusionDetectionEnv(gym.Env):
         if self.current_batch.shape[1] != feature_dim:
             raise ValueError(f"特征维度不匹配: 期望 {feature_dim}, 实际 {self.current_batch.shape[1]}")
         
-        # 获取指定索引的样本
+
         obs_arr = self.current_batch[idx, :].astype(np.float32)
         
-        # 确保为一维数组
+    
         obs_arr = obs_arr.flatten()
         if obs_arr.shape[0] != feature_dim:
             logging.error("观测值维度错误")
@@ -75,15 +71,15 @@ class IntrusionDetectionEnv(gym.Env):
         self.current_step = 0
         self.current_idx = 0
 
-        # 采样新批次
+
         self.current_batch, self.current_labels = self.data_loader.sample_batch()
         if self.current_batch is None:
             logging.error("尝试加载数据时当前批次为空")
             raise RuntimeError("Failed to load data in reset.")
             
-        # 确保current_batch是二维数组
+ 
         if self.current_batch.ndim == 1:
-            # 如果只有一条数据，则重塑为 (1, feature_dim)
+          
             self.current_batch = self.current_batch.reshape(1, -1)
         elif self.current_batch.ndim != 2:
             raise ValueError(f"current_batch 维度不支持: {self.current_batch.ndim}")
@@ -97,7 +93,7 @@ class IntrusionDetectionEnv(gym.Env):
         return observation
     
     def step(self, action):
-        # 处理各种可能的动作类型
+     
         if isinstance(action, torch.Tensor):
             action_val = action.item()
         elif isinstance(action, np.ndarray):
@@ -113,14 +109,14 @@ class IntrusionDetectionEnv(gym.Env):
         if action_val not in [0, 1]:
             raise ValueError(f"动作值必须为0或1，实际值: {action_val}")
 
-        # 获取当前样本的真实标签
+
         true_label_val = int(self.current_labels[self.current_idx])
         
-        # 计算奖励
+
         if action_val == true_label_val:
             reward = 2.0 if true_label_val == 1 else 1.0
         else:
-            # 如果真实标签是攻击（1）但预测为正常（0），则惩罚更大
+          
             if true_label_val == 1 and action_val == 0:
                 reward = -3.0
             else:
@@ -131,7 +127,7 @@ class IntrusionDetectionEnv(gym.Env):
         
         done = (self.current_step >= self.max_steps) or (self.current_idx == 0 and self.current_step > 0)
 
-        # 如果done，返回零数组；否则返回下一个观测
+    
         if done:
             next_observation = np.zeros(self.observation_space.shape, dtype=np.float32)
         else:
@@ -159,7 +155,7 @@ class IntrusionDetectionEnv(gym.Env):
     
     @property
     def spec(self):
-        """添加spec属性以兼容rlkit"""
+    
         class EnvSpec:
             def __init__(self, observation_space, action_space, max_episode_steps):
                 self.observation_space = observation_space
